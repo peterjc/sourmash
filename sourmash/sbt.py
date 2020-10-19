@@ -102,6 +102,28 @@ class GraphFactory(object):
         return (self.ksize, self.starting_size, self.n_tables)
 
 
+class HLLFactory(object):
+    """Build new HyperLogLogs.
+
+    Parameters
+    ----------
+    ksize: int
+        k-mer size.
+    error_rate: float
+        expected error rate (smaller error rates require more memory)
+    """
+
+    def __init__(self, ksize, error_rate=0.01):
+        self.ksize = ksize
+        self.error_rate = error_rate
+
+    def __call__(self):
+        return HLL(self.error_rate, self.ksize)
+
+    def init_args(self):
+        return (self.ksize, self.error_rate)
+
+
 class _NodesCache(Cache):
     """A cache for SBT nodes that calls .unload() when the node is removed from cache.
 
@@ -484,6 +506,7 @@ class SBT(Index):
             # this node was already build, skip
             return
 
+        #node = HLLNode(self.factory, name="internal.{}".format(pos))
         node = Node(self.factory, name="internal.{}".format(pos))
         self._nodes[pos] = node
         for c in self.children(pos):
@@ -632,7 +655,7 @@ class SBT(Index):
             'args': sinfo.storage_args
         }
         info['factory'] = {
-            'class': GraphFactory.__name__,
+            'class': self.factory.__class__.__name__,
             'args': self.factory.init_args()
         }
 
@@ -697,7 +720,7 @@ class SBT(Index):
 
 
     @classmethod
-    def load(cls, location, *, leaf_loader=None, storage=None, print_version_warning=True, cache_size=None):
+    def load(cls, location, *, leaf_loader=None, node_loader=None, storage=None, print_version_warning=True, cache_size=None):
         """Load an SBT description from a file.
 
         Parameters
@@ -706,6 +729,8 @@ class SBT(Index):
             path to the SBT description.
         leaf_loader : function, optional
             function to load leaf nodes. Defaults to ``Leaf.load``.
+        node_loader : function, optional
+            function to load internal nodes. Defaults to ``Node.load``.
         storage : Storage, optional
             Storage to be used for saving node data.
             Defaults to FSStorage (a hidden directory at the same level of path)
@@ -764,6 +789,8 @@ class SBT(Index):
 
         if leaf_loader is None:
             leaf_loader = Leaf.load
+        if node_loader is None:
+            node_loader = Node.load
 
         loaders = {
             1: cls._load_v1,
@@ -793,10 +820,10 @@ class SBT(Index):
             elif storage is None:
                 storage = klass(**jnodes['storage']['args'])
 
-        return loader(jnodes, leaf_loader, dirname, storage, print_version_warning=print_version_warning, cache_size=cache_size)
+        return loader(jnodes, leaf_loader, dirname, storage, node_loader=node_loader, print_version_warning=print_version_warning, cache_size=cache_size)
 
     @staticmethod
-    def _load_v1(jnodes, leaf_loader, dirname, storage, *, print_version_warning=True, cache_size=None):
+    def _load_v1(jnodes, leaf_loader, dirname, storage, *, node_loader=None, print_version_warning=True, cache_size=None):
 
         if jnodes[0] is None:
             raise ValueError("Empty tree!")
@@ -827,7 +854,7 @@ class SBT(Index):
         return tree
 
     @classmethod
-    def _load_v2(cls, info, leaf_loader, dirname, storage, *, print_version_warning=True, cache_size=None):
+    def _load_v2(cls, info, leaf_loader, dirname, storage, *, node_loader=None, print_version_warning=True, cache_size=None):
         nodes = {int(k): v for (k, v) in info['nodes'].items()}
 
         if nodes[0] is None:
@@ -861,7 +888,7 @@ class SBT(Index):
         return tree
 
     @classmethod
-    def _load_v3(cls, info, leaf_loader, dirname, storage, *, print_version_warning=True, cache_size=None):
+    def _load_v3(cls, info, leaf_loader, dirname, storage, *, node_loader=None, print_version_warning=True, cache_size=None):
         nodes = {int(k): v for (k, v) in info['nodes'].items()}
 
         if not nodes:
@@ -902,7 +929,7 @@ class SBT(Index):
         return tree
 
     @classmethod
-    def _load_v4(cls, info, leaf_loader, dirname, storage, *, print_version_warning=True, cache_size=None):
+    def _load_v4(cls, info, leaf_loader, dirname, storage, *, node_loader=None, print_version_warning=True, cache_size=None):
         nodes = {int(k): v for (k, v) in info['nodes'].items()}
 
         if not nodes:
@@ -936,7 +963,7 @@ class SBT(Index):
         return tree
 
     @classmethod
-    def _load_v5(cls, info, leaf_loader, dirname, storage, *, print_version_warning=True, cache_size=None):
+    def _load_v5(cls, info, leaf_loader, dirname, storage, *, node_loader=None, print_version_warning=True, cache_size=None):
         nodes = {int(k): v for (k, v) in info['nodes'].items()}
         leaves = {int(k): v for (k, v) in info['leaves'].items()}
 
@@ -977,7 +1004,7 @@ class SBT(Index):
         return tree
 
     @classmethod
-    def _load_v6(cls, info, leaf_loader, dirname, storage, *, print_version_warning=True, cache_size=None):
+    def _load_v6(cls, info, leaf_loader, dirname, storage, *, node_loader=None, print_version_warning=True, cache_size=None):
         nodes = {int(k): v for (k, v) in info['nodes'].items()}
         leaves = {int(k): v for (k, v) in info['signatures'].items()}
 
@@ -994,12 +1021,18 @@ class SBT(Index):
             elif storage is None:
                 storage = klass(**info['storage']['args'])
 
-        factory = GraphFactory(*info['factory']['args'])
+        if info['factory']['class'] == 'HLLFactory':
+            factory = HLLFactory(*info['factory']['args'])
+        else:
+            factory = GraphFactory(*info['factory']['args'])
+
+        if node_loader is None:
+            node_loader = Node.load
 
         max_node = 0
         for k, node in nodes.items():
             node['factory'] = factory
-            sbt_node = Node.load(node, storage)
+            sbt_node = node_loader(node, storage)
 
             sbt_nodes[k] = sbt_node
             max_node = max(max_node, k)
@@ -1257,6 +1290,32 @@ class Node(object):
             if min_n_below == 0:
                 min_n_below = 1
             parent.metadata['min_n_below'] = min_n_below
+
+
+class HLLNode(Node):
+
+    def __str__(self):
+        return '*HLLNode:{name} [unique: {unique}]'.format(
+                name=self.name, unique=len(self._data))
+
+    @property
+    def data(self):
+        if self._data is None:
+            if self._path is None:
+                self._data = self._factory()
+            else:
+                data = self.storage.load(self._path)
+                self._data = HLL.from_buffer(data)
+        return self._data
+
+    @staticmethod
+    def load(info, storage=None):
+        new_node = HLLNode(info['factory'],
+                           name=info['name'],
+                           path=info['filename'],
+                           storage=storage)
+        new_node.metadata = info.get('metadata', {})
+        return new_node
 
 
 class Leaf(object):

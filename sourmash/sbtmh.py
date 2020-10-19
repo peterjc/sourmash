@@ -2,21 +2,30 @@ from io import BytesIO
 import os
 import sys
 
-from .sbt import Leaf, SBT, GraphFactory
+from .sbt import Leaf, SBT, GraphFactory, Node, HLLNode, HLLFactory
 from . import signature
 from .logging import trace
 
 
-def load_sbt_index(filename, *, print_version_warning=True, cache_size=None):
+def load_sbt_index(filename, *, print_version_warning=True, cache_size=None, hll=False):
     "Load and return an SBT index."
-    return SBT.load(filename, leaf_loader=SigLeaf.load,
+    if hll:
+        node_loader = HLLNode.load
+    else:
+        node_loader = Node.load
+
+    return SBT.load(filename,
+                    node_loader=node_loader,
+                    leaf_loader=SigLeaf.load,
                     print_version_warning=print_version_warning,
                     cache_size=cache_size)
 
 
-def create_sbt_index(bloom_filter_size=1e5, n_children=2):
+def create_sbt_index(bloom_filter_size=1e5, n_children=2, hll=False):
     "Create an empty SBT index."
-    if bloom_filter_size == 0:
+    if hll:
+        factory = HLLFactory(1, 0.01)
+    elif bloom_filter_size == 0:
         factory = None
     else:
         factory = GraphFactory(1, bloom_filter_size, 4)

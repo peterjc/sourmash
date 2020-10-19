@@ -7,7 +7,7 @@ import pytest
 import sourmash
 from sourmash import load_one_signature, SourmashSignature, load_signatures
 from sourmash.exceptions import IndexNotSupported
-from sourmash.sbt import SBT, GraphFactory, Leaf, Node, scaffold
+from sourmash.sbt import SBT, GraphFactory, Leaf, Node, scaffold, HLLFactory, HLLNode
 from sourmash.sbtmh import (SigLeaf, search_minhashes,
                             search_minhashes_containment)
 from sourmash.sbt_storage import (FSStorage, RedisStorage,
@@ -192,6 +192,37 @@ def test_tree_save_load(n_children):
         tree.save(os.path.join(location, 'demo'))
         tree = SBT.load(os.path.join(location, 'demo'),
                         leaf_loader=SigLeaf.load)
+
+        print('*' * 60)
+        print("{}:".format(to_search.metadata))
+        new_result = {str(s) for s in tree.find(search_minhashes,
+                                                to_search.data, 0.1)}
+        print(*new_result, sep='\n')
+
+        assert old_result == new_result
+
+
+def test_barm_save_load(n_children):
+    factory = HLLFactory(31, 0.01)
+    tree = SBT(factory, d=n_children)
+
+    for f in utils.SIG_FILES:
+        sig = load_one_signature(utils.get_test_data(f))
+        leaf = SigLeaf(os.path.basename(f), sig)
+        tree.add_node(leaf)
+        to_search = leaf
+
+    print('*' * 60)
+    print("{}:".format(to_search.metadata))
+    old_result = {str(s) for s in tree.find(search_minhashes,
+                                            to_search.data, 0.1)}
+    print(*old_result, sep='\n')
+
+    with utils.TempDirectory() as location:
+        tree.save(os.path.join(location, 'demo'))
+        tree = SBT.load(os.path.join(location, 'demo'),
+                        leaf_loader=SigLeaf.load,
+                        node_loader=HLLNode.load)
 
         print('*' * 60)
         print("{}:".format(to_search.metadata))

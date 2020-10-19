@@ -335,7 +335,7 @@ def index(args):
         if bf_size == 0:
             bf_size = None
 
-        tree = create_sbt_index(bf_size, n_children=args.n_children)
+        tree = create_sbt_index(bf_size, n_children=args.n_children, hll=False)
         batch = True
 
         # TODO: set up storage here
