@@ -34,7 +34,9 @@ def compare_serial(siglist, ignore_abundance, downsample=False):
     similarities = np.ones((n, n))
 
     for i, j in iterator:
-        similarities[i][j] = similarities[j][i] = siglist[i].similarity(siglist[j], ignore_abundance, downsample)
+        similarities[i][j] = similarities[j][i] = siglist[i].similarity(
+            siglist[j], ignore_abundance, downsample
+        )
 
     return similarities
 
@@ -55,8 +57,9 @@ def compare_serial_containment(siglist, downsample=False):
     containments = np.ones((n, n))
     for i in range(n):
         for j in range(n):
-            containments[i][j] = siglist[j].contained_by(siglist[i],
-                                                         downsample=downsample)
+            containments[i][j] = siglist[j].contained_by(
+                siglist[i], downsample=downsample
+            )
 
     return containments
 
@@ -65,9 +68,9 @@ def similarity_args_unpack(args, ignore_abundance, downsample):
     """Helper function to unpack the arguments. Written to use in pool.imap
     as it can only be given one argument."""
     sig1, sig2 = args
-    return sig1.similarity(sig2,
-                           ignore_abundance=ignore_abundance,
-                           downsample=downsample)
+    return sig1.similarity(
+        sig2, ignore_abundance=ignore_abundance, downsample=downsample
+    )
 
 
 def get_similarities_at_index(index, ignore_abundance, downsample, siglist):
@@ -89,16 +92,17 @@ def get_similarities_at_index(index, ignore_abundance, downsample, siglist):
         with rest of the signatures from index+1
     """
     startt = time.time()
-    sig_iterator = itertools.product([siglist[index]], siglist[index + 1:])
-    func = partial(similarity_args_unpack,
-                   ignore_abundance=ignore_abundance,
-                   downsample=downsample)
+    sig_iterator = itertools.product([siglist[index]], siglist[index + 1 :])
+    func = partial(
+        similarity_args_unpack, ignore_abundance=ignore_abundance, downsample=downsample
+    )
     similarity_list = list(map(func, sig_iterator))
     notify(
         "comparison for index {} done in {:.5f} seconds",
         index,
         time.time() - startt,
-        end='\r')
+        end="\r",
+    )
     return similarity_list
 
 
@@ -144,7 +148,8 @@ def compare_parallel(siglist, ignore_abundance, downsample, n_jobs):
         get_similarities_at_index,
         siglist=siglist,
         ignore_abundance=ignore_abundance,
-        downsample=downsample)
+        downsample=downsample,
+    )
     notify("Created similarity func")
 
     # Initialize multiprocess.pool
@@ -167,18 +172,24 @@ def compare_parallel(siglist, ignore_abundance, downsample, n_jobs):
         startt = time.time()
         col_idx = index + 1
         for idx_condensed, item in enumerate(l):
-            memmap_similarities[index, col_idx + idx_condensed] = memmap_similarities[idx_condensed + col_idx, index] = item
+            memmap_similarities[index, col_idx + idx_condensed] = memmap_similarities[
+                idx_condensed + col_idx, index
+            ] = item
         notify(
             "Setting similarities matrix for index {} done in {:.5f} seconds",
             index,
             time.time() - startt,
-            end='\r')
+            end="\r",
+        )
     notify("Setting similarities completed")
 
     pool.close()
     pool.join()
 
-    notify("Time taken to compare all pairs parallely is {:.5f} seconds ", time.time() - start_initial)
+    notify(
+        "Time taken to compare all pairs parallely is {:.5f} seconds ",
+        time.time() - start_initial,
+    )
     return np.memmap(filename, dtype=np.float64, shape=(length_siglist, length_siglist))
 
 

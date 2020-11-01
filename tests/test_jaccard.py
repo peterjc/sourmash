@@ -72,10 +72,10 @@ def test_dna_mh(track_abundance):
     e1 = MinHash(n=5, ksize=4, track_abundance=track_abundance)
     e2 = MinHash(n=5, ksize=4, track_abundance=track_abundance)
 
-    seq = 'ATGGCAGTGACGATGCCAG'
+    seq = "ATGGCAGTGACGATGCCAG"
     e1.add_sequence(seq)
     for i in range(len(seq) - 3):
-        e2.add_kmer(seq[i:i + 4])
+        e2.add_kmer(seq[i : i + 4])
 
     assert e1.hashes.keys() == e2.hashes.keys()
     print(e1.hashes.keys())
@@ -84,16 +84,14 @@ def test_dna_mh(track_abundance):
 
 
 def test_protein_mh(track_abundance):
-    e1 = MinHash(n=5, ksize=6, is_protein=True,
-                    track_abundance=track_abundance)
-    e2 = MinHash(n=5, ksize=6, is_protein=True,
-                    track_abundance=track_abundance)
+    e1 = MinHash(n=5, ksize=6, is_protein=True, track_abundance=track_abundance)
+    e2 = MinHash(n=5, ksize=6, is_protein=True, track_abundance=track_abundance)
 
-    seq = 'ATGGCAGTGACGATGCCG'
+    seq = "ATGGCAGTGACGATGCCG"
     e1.add_sequence(seq)
 
     for i in range(len(seq) - 5):
-        kmer = seq[i:i + 6]
+        kmer = seq[i : i + 6]
         e2.add_kmer(kmer)
 
     assert e1.hashes.keys() == e2.hashes.keys()
@@ -104,10 +102,9 @@ def test_pickle(track_abundance):
     import pickle
     from io import BytesIO
 
-    e1 = MinHash(n=5, ksize=6, is_protein=False,
-                 track_abundance=track_abundance)
+    e1 = MinHash(n=5, ksize=6, is_protein=False, track_abundance=track_abundance)
 
-    seq = 'ATGGCAGTGACGATGCCG'
+    seq = "ATGGCAGTGACGATGCCG"
     e1.add_sequence(seq)
     e1.add_sequence(seq)
 
@@ -127,8 +124,7 @@ def test_pickle(track_abundance):
 
 def test_bad_construct_1(track_abundance):
     try:
-        e1 = MinHash(ksize=6, is_protein=False,
-                        track_abundance=track_abundance)
+        e1 = MinHash(ksize=6, is_protein=False, track_abundance=track_abundance)
         assert 0, "require n in constructor"
     except TypeError:
         pass
@@ -136,8 +132,7 @@ def test_bad_construct_1(track_abundance):
 
 def test_bad_construct_2(track_abundance):
     try:
-        e1 = MinHash(n=100, is_protein=False,
-                        track_abundance=track_abundance)
+        e1 = MinHash(n=100, is_protein=False, track_abundance=track_abundance)
         assert 0, "require ksize in constructor"
     except TypeError:
         pass
@@ -171,15 +166,16 @@ def test_abund_similarity_zero():
 
 ####
 
+
 def test_jaccard_on_real_data():
     from sourmash.signature import load_signatures
 
-    afile = 'n10000/GCF_000005845.2_ASM584v2_genomic.fna.gz.sig.gz'
+    afile = "n10000/GCF_000005845.2_ASM584v2_genomic.fna.gz.sig.gz"
     a = utils.get_test_data(afile)
     sig1 = list(load_signatures(a))[0]
     mh1 = sig1.minhash
 
-    bfile = 'n10000/GCF_000006945.1_ASM694v1_genomic.fna.gz.sig.gz'
+    bfile = "n10000/GCF_000006945.1_ASM694v1_genomic.fna.gz.sig.gz"
     b = utils.get_test_data(bfile)
     sig2 = list(load_signatures(b))[0]
     mh2 = sig2.minhash
@@ -206,12 +202,12 @@ def test_jaccard_on_real_data():
 def test_scaled_on_real_data():
     from sourmash.signature import load_signatures
 
-    afile = 'scaled100/GCF_000005845.2_ASM584v2_genomic.fna.gz.sig.gz'
+    afile = "scaled100/GCF_000005845.2_ASM584v2_genomic.fna.gz.sig.gz"
     a = utils.get_test_data(afile)
     sig1 = list(load_signatures(a))[0]
     mh1 = sig1.minhash
 
-    bfile = 'scaled100/GCF_000006945.1_ASM694v1_genomic.fna.gz.sig.gz'
+    bfile = "scaled100/GCF_000006945.1_ASM694v1_genomic.fna.gz.sig.gz"
     b = utils.get_test_data(bfile)
     sig2 = list(load_signatures(b))[0]
     mh2 = sig2.minhash
@@ -244,12 +240,12 @@ def test_scaled_on_real_data():
 def test_scaled_on_real_data_2():
     from sourmash.signature import load_signatures
 
-    afile = 'scaled100/GCF_000005845.2_ASM584v2_genomic.fna.gz.sig.gz'
+    afile = "scaled100/GCF_000005845.2_ASM584v2_genomic.fna.gz.sig.gz"
     a = utils.get_test_data(afile)
     sig1 = list(load_signatures(a))[0]
     mh1 = sig1.minhash
 
-    bfile = 'scaled100/GCF_000006945.1_ASM694v1_genomic.fna.gz.sig.gz'
+    bfile = "scaled100/GCF_000006945.1_ASM694v1_genomic.fna.gz.sig.gz"
     b = utils.get_test_data(bfile)
     sig2 = list(load_signatures(b))[0]
     mh2 = sig2.minhash

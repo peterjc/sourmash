@@ -55,19 +55,20 @@ class Index(ABC):
         """
 
         # check arguments
-        if 'threshold' not in kwargs:
+        if "threshold" not in kwargs:
             raise TypeError("'search' requires 'threshold'")
-        threshold = kwargs['threshold']
+        threshold = kwargs["threshold"]
 
-        do_containment = kwargs.get('do_containment', False)
-        ignore_abundance = kwargs.get('ignore_abundance', False)
+        do_containment = kwargs.get("do_containment", False)
+        ignore_abundance = kwargs.get("ignore_abundance", False)
 
         # configure search - containment? ignore abundance?
         if do_containment:
             query_match = lambda x: query.contained_by(x, downsample=True)
         else:
             query_match = lambda x: query.similarity(
-                x, downsample=True, ignore_abundance=ignore_abundance)
+                x, downsample=True, ignore_abundance=ignore_abundance
+            )
 
         # do the actual search:
         matches = []
@@ -83,14 +84,14 @@ class Index(ABC):
 
     def gather(self, query, *args, **kwargs):
         "Return the match with the best Jaccard containment in the Index."
-        if not query.minhash:             # empty query? quit.
+        if not query.minhash:  # empty query? quit.
             return []
 
         scaled = query.minhash.scaled
         if not scaled:
-            raise ValueError('gather requires scaled signatures')
+            raise ValueError("gather requires scaled signatures")
 
-        threshold_bp = kwargs.get('threshold_bp', 0.0)
+        threshold_bp = kwargs.get("threshold_bp", 0.0)
         threshold = 0.0
 
         # are we setting a threshold?
@@ -121,6 +122,7 @@ class Index(ABC):
     def select(self, ksize=None, moltype=None):
         ""
 
+
 class LinearIndex(Index):
     def __init__(self, _signatures=None, filename=None):
         self._signatures = []
@@ -139,12 +141,14 @@ class LinearIndex(Index):
 
     def save(self, path):
         from .signature import save_signatures
-        with open(path, 'wt') as fp:
+
+        with open(path, "wt") as fp:
             save_signatures(self.signatures(), fp)
 
     @classmethod
     def load(cls, location):
         from .signature import load_signatures
+
         si = load_signatures(location)
 
         lidx = LinearIndex(si, filename=location)
@@ -153,9 +157,10 @@ class LinearIndex(Index):
     def select(self, ksize=None, moltype=None):
         def select_sigs(siglist, ksize, moltype):
             for ss in siglist:
-                if (ksize is None or ss.minhash.ksize == ksize) and \
-                   (moltype is None or ss.minhash.moltype == moltype):
-                   yield ss
+                if (ksize is None or ss.minhash.ksize == ksize) and (
+                    moltype is None or ss.minhash.moltype == moltype
+                ):
+                    yield ss
 
-        siglist=select_sigs(self._signatures, ksize, moltype)
+        siglist = select_sigs(self._signatures, ksize, moltype)
         return LinearIndex(siglist, self.filename)

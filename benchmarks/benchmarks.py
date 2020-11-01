@@ -135,6 +135,7 @@ class TimeMinAbundanceSuite(TimeMinHashSuite):
         for i in range(500):
             mh.set_abundances(mins, clear=False)
 
+
 class PeakmemMinAbundanceSuite(PeakmemMinHashSuite):
     def setup(self):
         PeakmemMinHashSuite.setup(self)

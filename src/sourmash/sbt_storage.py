@@ -9,8 +9,8 @@ import zipfile
 from abc import ABC
 from pathlib import Path
 
-class Storage(ABC):
 
+class Storage(ABC):
     @abc.abstractmethod
     def save(self, path, content):
         pass
@@ -36,7 +36,6 @@ class Storage(ABC):
 
 
 class FSStorage(Storage):
-
     def __init__(self, location, subdir):
         self.location = location
         self.subdir = subdir
@@ -46,7 +45,7 @@ class FSStorage(Storage):
             os.makedirs(fullpath)
 
     def init_args(self):
-        return {'path': self.subdir}
+        return {"path": self.subdir}
 
     def save(self, path, content):
         "Save a node/leaf."
@@ -55,7 +54,7 @@ class FSStorage(Storage):
 
         if os.path.exists(fullpath):
             # check for content, if same return path,
-            with open(fullpath, 'rb') as f:
+            with open(fullpath, "rb") as f:
                 old_content = f.read()
                 if old_content == content:
                     return path
@@ -72,7 +71,7 @@ class FSStorage(Storage):
                     newpath = "{}_{}".format(path, n)
 
         fullpath = os.path.join(self.location, self.subdir, newpath)
-        with open(fullpath, 'wb') as f:
+        with open(fullpath, "wb") as f:
             f.write(content)
 
         return newpath
@@ -83,7 +82,6 @@ class FSStorage(Storage):
 
 
 class ZipStorage(Storage):
-
     def __init__(self, path):
         self.path = os.path.abspath(path)
 
@@ -97,14 +95,15 @@ class ZipStorage(Storage):
         # so we need to check some things:
         if not os.path.exists(self.path):
             # If the file doesn't exist open it in write mode.
-            self.zipfile = zipfile.ZipFile(path, mode='w',
-                                           compression=zipfile.ZIP_STORED)
+            self.zipfile = zipfile.ZipFile(
+                path, mode="w", compression=zipfile.ZIP_STORED
+            )
         else:
             # If it exists, open it in read mode and prepare a buffer for
             # new/duplicated items. During close() there are checks to see
             # how the original file needs to be updated (append new items,
             # deal with duplicates, and so on)
-            self.zipfile = zipfile.ZipFile(path, 'r')
+            self.zipfile = zipfile.ZipFile(path, "r")
             self.bufferzip = zipfile.ZipFile(BytesIO(), mode="w")
 
         self.subdir = None
@@ -175,7 +174,7 @@ class ZipStorage(Storage):
             return self._load_from_zf(self.bufferzip, path)
 
     def init_args(self):
-        return {'path': self.path}
+        return {"path": self.path}
 
     def close(self):
         # This is a bit complicated, but we have to deal with new data
@@ -224,7 +223,7 @@ class ZipStorage(Storage):
                     # Since there is no duplicated data, we can
                     # reopen self.zipfile in append mode and write the new data
                     self.zipfile.close()
-                    zf = zipfile.ZipFile(self.path, mode='a')
+                    zf = zipfile.ZipFile(self.path, mode="a")
                     for item in new_data:
                         zf.writestr(item, self.bufferzip.read(item))
             # finally, close the buffer and release memory
@@ -239,9 +238,9 @@ class ZipStorage(Storage):
 
 
 class IPFSStorage(Storage):
-
     def __init__(self, pin_on_add=True, **kwargs):
         import ipfshttpclient
+
         self.ipfs_args = kwargs
         self.pin_on_add = pin_on_add
         self.api = ipfshttpclient.connect(**self.ipfs_args)
@@ -278,9 +277,9 @@ class IPFSStorage(Storage):
 
 
 class RedisStorage(Storage):
-
     def __init__(self, **kwargs):
         import redis
+
         self.redis_args = kwargs
         self.conn = redis.Redis(**self.redis_args)
 

@@ -37,20 +37,14 @@ def _get_max_hash_for_scaled(scaled):
     elif scaled == 1:
         return get_minhash_max_hash()
 
-    return min(
-        int(round(get_minhash_max_hash() / scaled, 0)),
-        MINHASH_MAX_HASH
-    )
+    return min(int(round(get_minhash_max_hash() / scaled, 0)), MINHASH_MAX_HASH)
 
 
 def _get_scaled_for_max_hash(max_hash):
     "Convert a 'max_hash' value into a 'scaled' value."
     if max_hash == 0:
         return 0
-    return min(
-        int(round(get_minhash_max_hash() / max_hash, 0)),
-        MINHASH_MAX_HASH
-    )
+    return min(int(round(get_minhash_max_hash() / max_hash, 0)), MINHASH_MAX_HASH)
 
 
 def to_bytes(s):
@@ -82,14 +76,14 @@ def hash_murmur(kmer, seed=MINHASH_DEFAULT_SEED):
 def translate_codon(codon):
     "Translate a codon into an amino acid."
     try:
-        return rustcall(lib.sourmash_translate_codon,
-                        to_bytes(codon)).decode('utf-8')
+        return rustcall(lib.sourmash_translate_codon, to_bytes(codon)).decode("utf-8")
     except SourmashError as e:
         raise ValueError(e.message)
 
 
 class _HashesWrapper(Mapping):
     "A read-only view of the hashes contained by a MinHash object."
+
     def __init__(self, h):
         self._data = h
 
@@ -138,6 +132,7 @@ class MinHash(RustObject):
     >>> round(mh1.similarity(mh2), 2)
     0.85
     """
+
     __dealloc_func__ = lib.kmerminhash_free
 
     def __init__(
@@ -236,16 +231,29 @@ class MinHash(RustObject):
 
     def __setstate__(self, tup):
         "support pickling via __getstate__/__setstate__"
-        (n, ksize, is_protein, dayhoff, hp, mins, _, track_abundance,
-         max_hash, seed) = tup
+        (
+            n,
+            ksize,
+            is_protein,
+            dayhoff,
+            hp,
+            mins,
+            _,
+            track_abundance,
+            max_hash,
+            seed,
+        ) = tup
 
         self.__del__()
 
         hash_function = (
-            lib.HASH_FUNCTIONS_MURMUR64_DAYHOFF if dayhoff else
-            lib.HASH_FUNCTIONS_MURMUR64_HP if hp else
-            lib.HASH_FUNCTIONS_MURMUR64_PROTEIN if is_protein else
-            lib.HASH_FUNCTIONS_MURMUR64_DNA
+            lib.HASH_FUNCTIONS_MURMUR64_DAYHOFF
+            if dayhoff
+            else lib.HASH_FUNCTIONS_MURMUR64_HP
+            if hp
+            else lib.HASH_FUNCTIONS_MURMUR64_PROTEIN
+            if is_protein
+            else lib.HASH_FUNCTIONS_MURMUR64_DNA
         )
 
         scaled = _get_scaled_for_max_hash(max_hash)
@@ -277,8 +285,7 @@ class MinHash(RustObject):
 
     def add_sequence(self, sequence, force=False):
         "Add a sequence into the sketch."
-        self._methodcall(lib.kmerminhash_add_sequence, to_bytes(sequence),
-                         force)
+        self._methodcall(lib.kmerminhash_add_sequence, to_bytes(sequence), force)
 
     def add_kmer(self, kmer):
         "Add a kmer into the sketch."
@@ -305,9 +312,12 @@ class MinHash(RustObject):
         "Number of hashes."
         return self._methodcall(lib.kmerminhash_get_mins_size)
 
-    @deprecated(deprecated_in="3.5", removed_in="5.0",
-                current_version=VERSION,
-                details='Use .hashes property instead.')
+    @deprecated(
+        deprecated_in="3.5",
+        removed_in="5.0",
+        current_version=VERSION,
+        details="Use .hashes property instead.",
+    )
     def get_mins(self, with_abundance=False):
         """Return list of hashes or if ``with_abundance`` a list
         of (hash, abund).
@@ -317,10 +327,12 @@ class MinHash(RustObject):
             return mins.keys()
         return mins
 
-
-    @deprecated(deprecated_in="3.5", removed_in="5.0",
-                current_version=VERSION,
-                details='Use .hashes property instead.')
+    @deprecated(
+        deprecated_in="3.5",
+        removed_in="5.0",
+        current_version=VERSION,
+        details="Use .hashes property instead.",
+    )
     def get_hashes(self):
         "Return the list of hashes."
         return self.hashes.keys()
@@ -337,16 +349,17 @@ class MinHash(RustObject):
                 abunds_ptr = self._methodcall(lib.kmerminhash_get_abunds, size_abunds)
                 size_abunds = size_abunds[0]
                 assert size == size_abunds
-                result = dict(zip(ffi.unpack(mins_ptr, size), ffi.unpack(abunds_ptr, size)))
+                result = dict(
+                    zip(ffi.unpack(mins_ptr, size), ffi.unpack(abunds_ptr, size))
+                )
                 lib.kmerminhash_slice_free(abunds_ptr, size)
                 return _HashesWrapper(result)
             else:
                 d = ffi.unpack(mins_ptr, size)
-                return _HashesWrapper({ k : 1 for k in d })
+                return _HashesWrapper({k: 1 for k in d})
 
         finally:
             lib.kmerminhash_slice_free(mins_ptr, size)
-
 
     @property
     def seed(self):
@@ -384,9 +397,12 @@ class MinHash(RustObject):
         return self._methodcall(lib.kmerminhash_ksize)
 
     @property
-    @deprecated(deprecated_in="3.5", removed_in="5.0",
-                current_version=VERSION,
-                details='Use scaled instead.')
+    @deprecated(
+        deprecated_in="3.5",
+        removed_in="5.0",
+        current_version=VERSION,
+        details="Use scaled instead.",
+    )
     def max_hash(self):
         return self._methodcall(lib.kmerminhash_max_hash)
 
@@ -402,7 +418,9 @@ class MinHash(RustObject):
         if b is False:
             self._methodcall(lib.kmerminhash_disable_abundance)
         elif len(self) > 0:
-            raise RuntimeError("Can only set track_abundance=True if the MinHash is empty")
+            raise RuntimeError(
+                "Can only set track_abundance=True if the MinHash is empty"
+            )
         else:
             self._methodcall(lib.kmerminhash_enable_abundance)
 
@@ -432,18 +450,20 @@ class MinHash(RustObject):
         """
         if not isinstance(other, MinHash):
             raise TypeError("Must be a MinHash!")
-        return self._methodcall(lib.kmerminhash_count_common, other._get_objptr(), downsample)
+        return self._methodcall(
+            lib.kmerminhash_count_common, other._get_objptr(), downsample
+        )
 
     def downsample(self, num=None, scaled=None):
         """Copy this object and downsample new object to either `num` or
         `scaled`.
         """
         if num is None and scaled is None:
-            raise ValueError('must specify either num or scaled to downsample')
+            raise ValueError("must specify either num or scaled to downsample")
         elif num is not None:
             if self.num and self.num < num:
                 raise ValueError("new sample num is higher than current sample num")
-            max_hash=0
+            max_hash = 0
         elif scaled is not None:
             if self.num:
                 raise ValueError("num != 0 - cannot downsample a standard MinHash")
@@ -465,8 +485,14 @@ class MinHash(RustObject):
 
         # create new object:
         a = MinHash(
-            num, self.ksize, self.is_protein, self.dayhoff, self.hp,
-            self.track_abundance, self.seed, max_hash
+            num,
+            self.ksize,
+            self.is_protein,
+            self.dayhoff,
+            self.hp,
+            self.track_abundance,
+            self.seed,
+            max_hash,
         )
         # copy over hashes:
         if self.track_abundance:
@@ -480,8 +506,14 @@ class MinHash(RustObject):
         """Return a new MinHash with track_abundance=False."""
         # create new object:
         a = MinHash(
-            self.num, self.ksize, self.is_protein, self.dayhoff, self.hp,
-            False, self.seed, self.max_hash
+            self.num,
+            self.ksize,
+            self.is_protein,
+            self.dayhoff,
+            self.hp,
+            False,
+            self.seed,
+            self.max_hash,
         )
         a.add_many(self)
 
@@ -492,7 +524,9 @@ class MinHash(RustObject):
         if self.num != other.num:
             err = "must have same num: {} != {}".format(self.num, other.num)
             raise TypeError(err)
-        return self._methodcall(lib.kmerminhash_similarity, other._get_objptr(), True, downsample)
+        return self._methodcall(
+            lib.kmerminhash_similarity, other._get_objptr(), True, downsample
+        )
 
     def similarity(self, other, ignore_abundance=False, downsample=False):
         """Calculate similarity of two sketches.
@@ -508,14 +542,16 @@ class MinHash(RustObject):
 
         See https://en.wikipedia.org/wiki/Cosine_similarity
         """
-        return self._methodcall(lib.kmerminhash_similarity,
-                                other._get_objptr(),
-                                ignore_abundance, downsample)
+        return self._methodcall(
+            lib.kmerminhash_similarity,
+            other._get_objptr(),
+            ignore_abundance,
+            downsample,
+        )
 
     def angular_similarity(self, other):
         "Calculate the angular similarity."
-        return self._methodcall(lib.kmerminhash_angular_similarity,
-                                other._get_objptr())
+        return self._methodcall(lib.kmerminhash_angular_similarity, other._get_objptr())
 
     def is_compatible(self, other):
         return self._methodcall(lib.kmerminhash_is_compatible, other._get_objptr())
@@ -549,7 +585,9 @@ class MinHash(RustObject):
                 hashes.append(h)
                 abunds.append(v)
 
-            self._methodcall(lib.kmerminhash_set_abundances, hashes, abunds, len(hashes), clear)
+            self._methodcall(
+                lib.kmerminhash_set_abundances, hashes, abunds, len(hashes), clear
+            )
         else:
             raise RuntimeError(
                 "Use track_abundance=True when constructing "
@@ -561,12 +599,12 @@ class MinHash(RustObject):
         self._methodcall(lib.kmerminhash_add_protein, to_bytes(sequence))
 
     @property
-    def moltype(self):                    # TODO: test in minhash tests
+    def moltype(self):  # TODO: test in minhash tests
         if self.is_protein:
-            return 'protein'
+            return "protein"
         elif self.dayhoff:
-            return 'dayhoff'
+            return "dayhoff"
         elif self.hp:
-            return 'hp'
+            return "hp"
         else:
-            return 'DNA'
+            return "DNA"

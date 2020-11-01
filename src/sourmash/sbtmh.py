@@ -7,9 +7,12 @@ from . import signature
 
 def load_sbt_index(filename, *, print_version_warning=True, cache_size=None):
     "Load and return an SBT index."
-    return SBT.load(filename, leaf_loader=SigLeaf.load,
-                    print_version_warning=print_version_warning,
-                    cache_size=cache_size)
+    return SBT.load(
+        filename,
+        leaf_loader=SigLeaf.load,
+        print_version_warning=print_version_warning,
+        cache_size=cache_size,
+    )
 
 
 def create_sbt_index(bloom_filter_size=1e5, n_children=2):
@@ -36,8 +39,9 @@ def search_sbt_index(tree, query, threshold):
 
 class SigLeaf(Leaf):
     def __str__(self):
-        return '**Leaf:{name} -> {metadata}'.format(
-                name=self.name, metadata=self.metadata)
+        return "**Leaf:{name} -> {metadata}".format(
+            name=self.name, metadata=self.metadata
+        )
 
     def save(self, path):
         # this is here only for triggering the property load
@@ -51,13 +55,13 @@ class SigLeaf(Leaf):
     def update(self, parent):
         mh = self.data.minhash
         parent.data.update(mh)
-        min_n_below = parent.metadata.get('min_n_below', sys.maxsize)
+        min_n_below = parent.metadata.get("min_n_below", sys.maxsize)
         min_n_below = min(len(mh), min_n_below)
 
         if min_n_below == 0:
             min_n_below = 1
 
-        parent.metadata['min_n_below'] = min_n_below
+        parent.metadata["min_n_below"] = min_n_below
 
     @property
     def data(self):
@@ -72,6 +76,7 @@ class SigLeaf(Leaf):
 
 
 ### Search functionality.
+
 
 def _max_jaccard_underneath_internal_node(node, mh):
     """\
@@ -89,10 +94,10 @@ def _max_jaccard_underneath_internal_node(node, mh):
     matches = node.data.matches(mh)
 
     # get the size of the smallest collection of hashes below this point
-    min_n_below = node.metadata.get('min_n_below', -1)
+    min_n_below = node.metadata.get("min_n_below", -1)
 
     if min_n_below == -1:
-        raise Exception('cannot do similarity search on this SBT; need to rebuild.')
+        raise Exception("cannot do similarity search on this SBT; need to rebuild.")
 
     # max of numerator divided by min of denominator => max Jaccard
     max_score = float(matches) / min_n_below
@@ -123,7 +128,7 @@ def search_minhashes(node, sig, threshold, results=None):
 
 class SearchMinHashesFindBest(object):
     def __init__(self):
-        self.best_match = 0.
+        self.best_match = 0.0
 
     def search(self, node, sig, threshold, results=None):
         sig_mh = sig.minhash

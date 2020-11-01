@@ -27,7 +27,8 @@ def build_native(spec):
         rtld_flags=rtld_flags,
     )
 
+
 setup(
-  milksnake_tasks=[build_native],
-  package_dir={"": "src"},
+    milksnake_tasks=[build_native],
+    package_dir={"": "src"},
 )

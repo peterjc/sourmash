@@ -29,10 +29,10 @@ DEFAULT_N = 500
 
 def get_moltype(sig, require=False):
     mh = sig.minhash
-    if mh.moltype in ('DNA', 'dayhoff', 'hp', 'protein'):
+    if mh.moltype in ("DNA", "dayhoff", "hp", "protein"):
         moltype = mh.moltype
     else:
-        raise ValueError('unknown molecule type for sig {}'.format(sig))
+        raise ValueError("unknown molecule type for sig {}".format(sig))
 
     return moltype
 
@@ -42,16 +42,16 @@ def calculate_moltype(args, default=None):
 
     n = 0
     if args.dna:
-        moltype = 'DNA'
+        moltype = "DNA"
         n += 1
     if args.dayhoff:
-        moltype = 'dayhoff'
+        moltype = "dayhoff"
         n += 1
     if args.hp:
-        moltype = 'hp'
+        moltype = "hp"
         n += 1
     if args.protein:
-        moltype = 'protein'
+        moltype = "protein"
         n += 1
 
     if n > 1:
@@ -68,8 +68,9 @@ def load_query_signature(filename, ksize, select_moltype, select_md5=None):
     and indexed databases.
     """
     try:
-        sl = load_file_as_signatures(filename, ksize=ksize,
-                                     select_moltype=select_moltype)
+        sl = load_file_as_signatures(
+            filename, ksize=ksize, select_moltype=select_moltype
+        )
         sl = list(sl)
     except (OSError, ValueError):
         error("Cannot open file '{}'", filename)
@@ -82,8 +83,7 @@ def load_query_signature(filename, ksize, select_moltype, select_md5=None):
             if sig_md5.startswith(select_md5.lower()):
                 # make sure we pick only one --
                 if found_sig is not None:
-                    error("Error! Multiple signatures start with md5 '{}'",
-                          select_md5)
+                    error("Error! Multiple signatures start with md5 '{}'", select_md5)
                     error("Please use a longer --md5 selector.")
                     sys.exit(-1)
                 else:
@@ -92,29 +92,28 @@ def load_query_signature(filename, ksize, select_moltype, select_md5=None):
             sl = [found_sig]
 
     if len(sl) and ksize is None:
-        ksizes = set([ ss.minhash.ksize for ss in sl ])
+        ksizes = set([ss.minhash.ksize for ss in sl])
         if len(ksizes) == 1:
             ksize = ksizes.pop()
-            sl = [ ss for ss in sl if ss.minhash.ksize == ksize ]
-            notify('select query k={} automatically.', ksize)
+            sl = [ss for ss in sl if ss.minhash.ksize == ksize]
+            notify("select query k={} automatically.", ksize)
         elif DEFAULT_LOAD_K in ksizes:
-            sl = [ ss for ss in sl if ss.minhash.ksize == DEFAULT_LOAD_K ]
-            notify('selecting default query k={}.', DEFAULT_LOAD_K)
+            sl = [ss for ss in sl if ss.minhash.ksize == DEFAULT_LOAD_K]
+            notify("selecting default query k={}.", DEFAULT_LOAD_K)
     elif ksize:
-        notify('selecting specified query k={}', ksize)
+        notify("selecting specified query k={}", ksize)
 
     if len(sl) != 1:
         error('When loading query from "{}"', filename)
-        error('{} signatures matching ksize and molecule type;', len(sl))
-        error('need exactly one. Specify --ksize or --dna, --rna, or --protein.')
+        error("{} signatures matching ksize and molecule type;", len(sl))
+        error("need exactly one. Specify --ksize or --dna, --rna, or --protein.")
         sys.exit(-1)
 
     return sl[0]
 
 
 class LoadSingleSignatures(object):
-    def __init__(self, filelist,  ksize=None, select_moltype=None,
-                 ignore_files=set()):
+    def __init__(self, filelist, ksize=None, select_moltype=None, ignore_files=set()):
         self.filelist = filelist
         self.ksize = ksize
         self.select_moltype = select_moltype
@@ -131,9 +130,9 @@ class LoadSingleSignatures(object):
                 self.skipped_ignore += 1
                 continue
 
-            sl = signature.load_signatures(filename,
-                                           ksize=self.ksize,
-                                           select_moltype=self.select_moltype)
+            sl = signature.load_signatures(
+                filename, ksize=self.ksize, select_moltype=self.select_moltype
+            )
             sl = list(sl)
             if len(sl) == 0:
                 self.skipped_nosig += 1
@@ -147,14 +146,14 @@ class LoadSingleSignatures(object):
                 self.moltypes.add(query_moltype)
 
             if len(self.ksizes) > 1 or len(self.moltypes) > 1:
-                raise ValueError('multiple k-mer sizes/molecule types present')
+                raise ValueError("multiple k-mer sizes/molecule types present")
 
             for query in sl:
                 yield filename, query, query_moltype, query_ksize
 
 
 def traverse_find_sigs(filenames, yield_all_files=False):
-    endings = ('.sig', '.sig.gz')
+    endings = (".sig", ".sig.gz")
     for filename in filenames:
         if os.path.isfile(filename):
             yield_me = False
@@ -176,7 +175,7 @@ def traverse_find_sigs(filenames, yield_all_files=False):
 
         for root, dirs, files in os.walk(dirname):
             for name in files:
-                if name.endswith('.sig') or yield_all_files:
+                if name.endswith(".sig") or yield_all_files:
                     fullname = os.path.join(root, name)
                     yield fullname
 
@@ -192,17 +191,18 @@ def filter_compatible_signatures(query, siglist, force=False):
 
 def check_signatures_are_compatible(query, subject):
     # is one scaled, and the other not? cannot do search
-    if query.minhash.scaled and not subject.minhash.scaled or \
-       not query.minhash.scaled and subject.minhash.scaled:
-       error("signature {} and {} are incompatible - cannot compare.",
-             query, subject)
-       if query.minhash.scaled:
-           error("{} was calculated with --scaled, {} was not.",
-                 query, subject)
-       if subject.minhash.scaled:
-           error("{} was calculated with --scaled, {} was not.",
-                 subject, query)
-       return 0
+    if (
+        query.minhash.scaled
+        and not subject.minhash.scaled
+        or not query.minhash.scaled
+        and subject.minhash.scaled
+    ):
+        error("signature {} and {} are incompatible - cannot compare.", query, subject)
+        if query.minhash.scaled:
+            error("{} was calculated with --scaled, {} was not.", query, subject)
+        if subject.minhash.scaled:
+            error("{} was calculated with --scaled, {} was not.", subject, query)
+        return 0
 
     return 1
 
@@ -216,14 +216,14 @@ def check_tree_is_compatible(treename, tree, query, is_similarity_query):
 
     if tree_mh.ksize != query_mh.ksize:
         error("ksize on tree '{}' is {};", treename, tree_mh.ksize)
-        error('this is different from query ksize of {}.', query_mh.ksize)
+        error("this is different from query ksize of {}.", query_mh.ksize)
         return 0
 
     # is one scaled, and the other not? cannot do search.
-    if (tree_mh.scaled and not query_mh.scaled) or \
-       (query_mh.scaled and not tree_mh.scaled):
-        error("for tree '{}', tree and query are incompatible for search.",
-              treename)
+    if (tree_mh.scaled and not query_mh.scaled) or (
+        query_mh.scaled and not tree_mh.scaled
+    ):
+        error("for tree '{}', tree and query are incompatible for search.", treename)
         if tree_mh.scaled:
             error("tree was calculated with scaled, query was not.")
         else:
@@ -231,11 +231,13 @@ def check_tree_is_compatible(treename, tree, query, is_similarity_query):
         return 0
 
     # are the scaled values incompatible? cannot downsample tree for similarity
-    if tree_mh.scaled and tree_mh.scaled < query_mh.scaled and \
-      is_similarity_query:
+    if tree_mh.scaled and tree_mh.scaled < query_mh.scaled and is_similarity_query:
         error("for tree '{}', scaled value is smaller than query.", treename)
-        error("tree scaled: {}; query scaled: {}. Cannot do similarity search.",
-              tree_mh.scaled, query_mh.scaled)
+        error(
+            "tree scaled: {}; query scaled: {}. Cannot do similarity search.",
+            tree_mh.scaled,
+            query_mh.scaled,
+        )
         return 0
 
     return 1
@@ -245,7 +247,7 @@ def check_lca_db_is_compatible(filename, db, query):
     query_mh = query.minhash
     if db.ksize != query_mh.ksize:
         error("ksize on db '{}' is {};", filename, db.ksize)
-        error('this is different from query ksize of {}.', query_mh.ksize)
+        error("this is different from query ksize of {}.", query_mh.ksize)
         return 0
 
     return 1
@@ -264,7 +266,7 @@ def load_dbs_and_sigs(filenames, query, is_similarity_query, *, cache_size=None)
     n_databases = 0
     databases = []
     for filename in filenames:
-        notify('loading from {}...', filename, end='\r')
+        notify("loading from {}...", filename, end="\r")
 
         try:
             db, dbtype = _load_database(filename, False, cache_size=cache_size)
@@ -287,12 +289,11 @@ def load_dbs_and_sigs(filenames, query, is_similarity_query, *, cache_size=None)
 
         # SBT
         elif dbtype == DatabaseType.SBT:
-            if not check_tree_is_compatible(filename, db, query,
-                                            is_similarity_query):
+            if not check_tree_is_compatible(filename, db, query, is_similarity_query):
                 sys.exit(-1)
 
-            databases.append((db, filename, 'SBT'))
-            notify('loaded SBT {}', filename, end='\r')
+            databases.append((db, filename, "SBT"))
+            notify("loaded SBT {}", filename, end="\r")
             n_databases += 1
 
         # LCA
@@ -301,10 +302,10 @@ def load_dbs_and_sigs(filenames, query, is_similarity_query, *, cache_size=None)
                 sys.exit(-1)
             query_scaled = query.minhash.scaled
 
-            notify('loaded LCA {}', filename, end='\r')
+            notify("loaded LCA {}", filename, end="\r")
             n_databases += 1
 
-            databases.append((db, filename, 'LCA'))
+            databases.append((db, filename, "LCA"))
 
         # signature file
         elif dbtype == DatabaseType.SIGLIST:
@@ -316,10 +317,9 @@ def load_dbs_and_sigs(filenames, query, is_similarity_query, *, cache_size=None)
                 sys.exit(-1)
 
             linear = LinearIndex(siglist, filename=filename)
-            databases.append((linear, filename, 'signature'))
+            databases.append((linear, filename, "signature"))
 
-            notify('loaded {} signatures from {}', len(linear),
-                   filename, end='\r')
+            notify("loaded {} signatures from {}", len(linear), filename, end="\r")
             n_signatures += len(linear)
 
         # unknown!?
@@ -328,21 +328,21 @@ def load_dbs_and_sigs(filenames, query, is_similarity_query, *, cache_size=None)
 
         # END for loop
 
-
-    notify(' '*79, end='\r')
+    notify(" " * 79, end="\r")
     if n_signatures and n_databases:
-        notify('loaded {} signatures and {} databases total.', n_signatures, 
-                                                               n_databases)
+        notify(
+            "loaded {} signatures and {} databases total.", n_signatures, n_databases
+        )
     elif n_signatures:
-        notify('loaded {} signatures.', n_signatures)
+        notify("loaded {} signatures.", n_signatures)
     elif n_databases:
-        notify('loaded {} databases.', n_databases)
+        notify("loaded {} databases.", n_databases)
     else:
-        notify('** ERROR: no signatures or databases loaded?')
+        notify("** ERROR: no signatures or databases loaded?")
         sys.exit(-1)
 
     if databases:
-        print('')
+        print("")
 
     return databases
 
@@ -364,7 +364,7 @@ def _load_database(filename, traverse_yield_all, *, cache_size=None):
     dbtype = None
 
     # special case stdin
-    if not loaded and filename == '-':
+    if not loaded and filename == "-":
         db = sourmash.load_signatures(sys.stdin, quiet=True, do_raise=True)
         db = list(db)
         loaded = True
@@ -375,7 +375,7 @@ def _load_database(filename, traverse_yield_all, *, cache_size=None):
         all_sigs = []
         for thisfile in traverse_find_sigs([filename], traverse_yield_all):
             try:
-                with open(thisfile, 'rt') as fp:
+                with open(thisfile, "rt") as fp:
                     x = sourmash.load_signatures(fp, quiet=True, do_raise=True)
                     siglist = list(x)
                     all_sigs.extend(siglist)
@@ -385,7 +385,7 @@ def _load_database(filename, traverse_yield_all, *, cache_size=None):
                 else:
                     raise
 
-        loaded=True
+        loaded = True
         db = all_sigs
         dbtype = DatabaseType.SIGLIST
 
@@ -393,7 +393,7 @@ def _load_database(filename, traverse_yield_all, *, cache_size=None):
     try:
         # CTB: could make this a generator, with some trickery; but for
         # now, just force into list.
-        with open(filename, 'rt') as fp:
+        with open(filename, "rt") as fp:
             db = sourmash.load_signatures(fp, quiet=True, do_raise=True)
             db = list(db)
 
@@ -402,7 +402,7 @@ def _load_database(filename, traverse_yield_all, *, cache_size=None):
     except Exception as exc:
         pass
 
-    if not loaded:                    # try load as SBT
+    if not loaded:  # try load as SBT
         try:
             db = load_sbt_index(filename, cache_size=cache_size)
             loaded = True
@@ -410,7 +410,7 @@ def _load_database(filename, traverse_yield_all, *, cache_size=None):
         except:
             pass
 
-    if not loaded:                    # try load as LCA
+    if not loaded:  # try load as LCA
         try:
             db, _, _ = load_single_database(filename)
             loaded = True
@@ -431,7 +431,11 @@ def _load_database(filename, traverse_yield_all, *, cache_size=None):
             pass
 
         if successful_screed_load:
-            raise OSError("Error while reading signatures from '{}' - got sequences instead! Is this a FASTA/FASTQ file?".format(filename))
+            raise OSError(
+                "Error while reading signatures from '{}' - got sequences instead! Is this a FASTA/FASTQ file?".format(
+                    filename
+                )
+            )
 
     if not loaded:
         raise OSError("Error while reading signatures from '{}'.".format(filename))
@@ -442,9 +446,10 @@ def _load_database(filename, traverse_yield_all, *, cache_size=None):
 # note: dup from index.py internal function.
 def _select_sigs(siglist, ksize, moltype):
     for ss in siglist:
-        if (ksize is None or ss.minhash.ksize == ksize) and \
-           (moltype is None or ss.minhash.moltype == moltype):
-           yield ss
+        if (ksize is None or ss.minhash.ksize == ksize) and (
+            moltype is None or ss.minhash.moltype == moltype
+        ):
+            yield ss
 
 
 def load_file_as_index(filename, yield_all_files=False):
@@ -462,18 +467,18 @@ def load_file_as_index(filename, yield_all_files=False):
     """
     db, dbtype = _load_database(filename, yield_all_files)
     if dbtype in (DatabaseType.LCA, DatabaseType.SBT):
-        return db                         # already an index!
+        return db  # already an index!
     elif dbtype == DatabaseType.SIGLIST:
         # turn siglist into a LinearIndex
         idx = LinearIndex(db, filename)
         return idx
     else:
-        assert 0                          # unknown enum!?
+        assert 0  # unknown enum!?
 
 
-def load_file_as_signatures(filename, select_moltype=None, ksize=None,
-                            yield_all_files=False,
-                            progress=None):
+def load_file_as_signatures(
+    filename, select_moltype=None, ksize=None, yield_all_files=False, progress=None
+):
     """Load 'filename' as a collection of signatures. Return an iterable.
 
     If 'filename' contains an SBT or LCA indexed database, will return
@@ -500,18 +505,19 @@ def load_file_as_signatures(filename, select_moltype=None, ksize=None,
     elif dbtype == DatabaseType.SIGLIST:
         loader = _select_sigs(db, moltype=select_moltype, ksize=ksize)
     else:
-        assert 0                          # unknown enum!?
+        assert 0  # unknown enum!?
 
     if progress:
         return progress.start_file(filename, loader)
     else:
         return loader
 
+
 def load_file_list_of_signatures(filename):
     "Load a list-of-files text file."
     try:
-        with open(filename, 'rt') as fp:
-            file_list = [ x.rstrip('\r\n') for x in fp ]
+        with open(filename, "rt") as fp:
+            file_list = [x.rstrip("\r\n") for x in fp]
     except OSError:
         raise ValueError("cannot open file '{}'".format(filename))
     except UnicodeDecodeError:
@@ -541,13 +547,14 @@ class FileOutput(object):
 
     will properly handle no argument or '-' as sys.stdout.
     """
-    def __init__(self, filename, mode='wt'):
+
+    def __init__(self, filename, mode="wt"):
         self.filename = filename
         self.mode = mode
         self.fp = None
 
     def open(self):
-        if self.filename == '-' or self.filename is None:
+        if self.filename == "-" or self.filename is None:
             return sys.stdout
         self.fp = open(self.filename, self.mode)
         return self.fp
@@ -574,6 +581,7 @@ class SignatureLoadingProgress(object):
 
     You can optionally notify of reading a file with `.notify(filename)`.
     """
+
     def __init__(self, reporting_interval=10):
         self.n_sig = 0
         self.interval = reporting_interval
@@ -586,18 +594,17 @@ class SignatureLoadingProgress(object):
         """
 
         msg = msg_template.format(*args, **kwargs)
-        end = kwargs.get('end', '\n')
+        end = kwargs.get("end", "\n")
         w = self.screen_width
 
         if len(msg) > w:
             truncate_len = len(msg) - w + 3
-            msg = '<<<' + msg[truncate_len:]
+            msg = "<<<" + msg[truncate_len:]
 
         notify(msg, end=end)
 
     def notify(self, filename):
-        self.short_notify("...reading from file '{}'",
-                          filename, end='\r')
+        self.short_notify("...reading from file '{}'", filename, end="\r")
 
     def start_file(self, filename, loader):
         n_this = 0
@@ -609,13 +616,17 @@ class SignatureLoadingProgress(object):
                 n_this += 1
                 n_total = n_before + n_this
                 if n_this and n_total % self.interval == 0:
-                    self.short_notify("...loading from '{}' / {} sigs total",
-                                      filename, n_total, end='\r')
+                    self.short_notify(
+                        "...loading from '{}' / {} sigs total",
+                        filename,
+                        n_total,
+                        end="\r",
+                    )
 
                 yield result
         except KeyboardInterrupt:
             # might as well nicely handle CTRL-C while we're at it!
-            notify('\n(CTRL-C received! quitting.)')
+            notify("\n(CTRL-C received! quitting.)")
             sys.exit(-1)
         finally:
             self.n_sig += n_this

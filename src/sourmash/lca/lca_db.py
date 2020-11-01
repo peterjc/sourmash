@@ -13,6 +13,7 @@ from sourmash.index import Index
 
 def cached_property(fun):
     """A memoize decorator for class properties."""
+
     @functools.wraps(fun)
     def get(self):
         try:
@@ -23,6 +24,7 @@ def cached_property(fun):
             pass
         ret = self._cache[fun] = fun(self)
         return ret
+
     return property(get)
 
 
@@ -55,7 +57,8 @@ class LCA_Database(Index):
     `hashval_to_idx` is a dictionary from individual hash values to sets of
     `idx`.
     """
-    def __init__(self, ksize, scaled, moltype='DNA'):
+
+    def __init__(self, ksize, scaled, moltype="DNA"):
         self.ksize = int(ksize)
         self.scaled = int(scaled)
         self.filename = None
@@ -71,14 +74,14 @@ class LCA_Database(Index):
         self.hashval_to_idx = defaultdict(set)
 
     def _invalidate_cache(self):
-        if hasattr(self, '_cache'):
+        if hasattr(self, "_cache"):
             del self._cache
 
     def _get_ident_index(self, ident, fail_on_duplicate=False):
         "Get (create if nec) a unique int id, idx, for each identifier."
         idx = self.ident_to_idx.get(ident)
         if fail_on_duplicate:
-            assert idx is None     # should be no duplicate identities
+            assert idx is None  # should be no duplicate identities
 
         if idx is None:
             idx = self._next_index
@@ -117,10 +120,18 @@ class LCA_Database(Index):
         minhash = sig.minhash
 
         if minhash.ksize != self.ksize:
-            raise ValueError("cannot insert signature with ksize {} into DB (ksize {})".format(minhash.ksize, self.ksize))
+            raise ValueError(
+                "cannot insert signature with ksize {} into DB (ksize {})".format(
+                    minhash.ksize, self.ksize
+                )
+            )
 
         if minhash.moltype != self.moltype:
-            raise ValueError("cannot insert signature with moltype {} into DB (moltype {})".format(minhash.moltype, self.moltype))
+            raise ValueError(
+                "cannot insert signature with moltype {} into DB (moltype {})".format(
+                    minhash.moltype, self.moltype
+                )
+            )
 
         # downsample to specified scaled; this has the side effect of
         # making sure they're all at the same scaled value!
@@ -155,7 +166,7 @@ class LCA_Database(Index):
                 # map idx to lid as well.
                 self.idx_to_lid[idx] = lid
             except TypeError:
-                raise ValueError('lineage cannot be used as a key?!')
+                raise ValueError("lineage cannot be used as a key?!")
 
         for hashval in minhash.hashes:
             self.hashval_to_idx[hashval].add(idx)
@@ -168,6 +179,7 @@ class LCA_Database(Index):
     def signatures(self):
         "Return all of the signatures in this LCA database."
         from sourmash import SourmashSignature
+
         for v in self._signatures.values():
             yield v
 
@@ -182,7 +194,9 @@ class LCA_Database(Index):
         if ok:
             return self
 
-        raise ValueError("cannot select LCA on ksize {} / moltype {}".format(ksize, moltype))
+        raise ValueError(
+            "cannot select LCA on ksize {} / moltype {}".format(ksize, moltype)
+        )
 
     @classmethod
     def load(cls, db_name):
@@ -190,10 +204,10 @@ class LCA_Database(Index):
         from .lca_utils import taxlist, LineagePair
 
         xopen = open
-        if db_name.endswith('.gz'):
+        if db_name.endswith(".gz"):
             xopen = gzip.open
 
-        with xopen(db_name, 'rt') as fp:
+        with xopen(db_name, "rt") as fp:
             load_d = {}
             try:
                 load_d = json.load(fp)
@@ -201,38 +215,42 @@ class LCA_Database(Index):
                 pass
 
             if not load_d:
-                raise ValueError("cannot parse database file '{}' as JSON; invalid format.")
+                raise ValueError(
+                    "cannot parse database file '{}' as JSON; invalid format."
+                )
 
             version = None
             db_type = None
             try:
-                version = load_d.get('version')
-                db_type = load_d.get('type')
+                version = load_d.get("version")
+                db_type = load_d.get("type")
             except AttributeError:
                 pass
 
-            if db_type != 'sourmash_lca':
+            if db_type != "sourmash_lca":
                 raise ValueError("database file '{}' is not an LCA db.".format(db_name))
 
             version = float(version)
-            if version < 2.0 or 'lid_to_lineage' not in load_d:
-                raise ValueError("Error! This is an old-style LCA DB. You'll need to rebuild or download a newer one.")
+            if version < 2.0 or "lid_to_lineage" not in load_d:
+                raise ValueError(
+                    "Error! This is an old-style LCA DB. You'll need to rebuild or download a newer one."
+                )
 
-            ksize = int(load_d['ksize'])
-            scaled = int(load_d['scaled'])
-            moltype = load_d.get('moltype', 'DNA')
+            ksize = int(load_d["ksize"])
+            scaled = int(load_d["scaled"])
+            moltype = load_d.get("moltype", "DNA")
 
             db = cls(ksize, scaled, moltype)
 
             # convert lineage_dict to proper lineages (tuples of LineagePairs)
-            lid_to_lineage_2 = load_d['lid_to_lineage']
+            lid_to_lineage_2 = load_d["lid_to_lineage"]
             lid_to_lineage = {}
             lineage_to_lid = {}
             for k, v in lid_to_lineage_2.items():
                 v = dict(v)
                 vv = []
                 for rank in taxlist():
-                    name = v.get(rank, '')
+                    name = v.get(rank, "")
                     vv.append(LineagePair(rank, name))
 
                 vv = tuple(vv)
@@ -243,18 +261,18 @@ class LCA_Database(Index):
 
             # convert hashval -> lineage index keys to integers (looks like
             # JSON doesn't have a 64 bit type so stores them as strings)
-            hashval_to_idx_2 = load_d['hashval_to_idx']
+            hashval_to_idx_2 = load_d["hashval_to_idx"]
             hashval_to_idx = {}
 
             for k, v in hashval_to_idx_2.items():
                 hashval_to_idx[int(k)] = v
             db.hashval_to_idx = hashval_to_idx
 
-            db.ident_to_name = load_d['ident_to_name']
-            db.ident_to_idx = load_d['ident_to_idx']
+            db.ident_to_name = load_d["ident_to_name"]
+            db.ident_to_idx = load_d["ident_to_idx"]
 
             db.idx_to_lid = {}
-            for k, v in load_d['idx_to_lid'].items():
+            for k, v in load_d["idx_to_lid"].items():
                 db.idx_to_lid[int(k)] = v
 
         db.filename = db_name
@@ -264,34 +282,35 @@ class LCA_Database(Index):
     def save(self, db_name):
         "Save LCA_Database to a JSON file."
         xopen = open
-        if db_name.endswith('.gz'):
+        if db_name.endswith(".gz"):
             xopen = gzip.open
 
-        with xopen(db_name, 'wt') as fp:
+        with xopen(db_name, "wt") as fp:
             # use an OrderedDict to preserve output order
             save_d = OrderedDict()
-            save_d['version'] = '2.1'
-            save_d['type'] = 'sourmash_lca'
-            save_d['license'] = 'CC0'
-            save_d['ksize'] = self.ksize
-            save_d['scaled'] = self.scaled
-            save_d['moltype'] = self.moltype
+            save_d["version"] = "2.1"
+            save_d["type"] = "sourmash_lca"
+            save_d["license"] = "CC0"
+            save_d["ksize"] = self.ksize
+            save_d["scaled"] = self.scaled
+            save_d["moltype"] = self.moltype
 
             # convert lineage internals from tuples to dictionaries
             d = OrderedDict()
             for k, v in self.lid_to_lineage.items():
-                d[k] = dict([ (vv.rank, vv.name) for vv in v ])
-            save_d['lid_to_lineage'] = d
+                d[k] = dict([(vv.rank, vv.name) for vv in v])
+            save_d["lid_to_lineage"] = d
 
             # convert values from sets to lists, so that JSON knows how to save
-            save_d['hashval_to_idx'] = \
-               dict((k, list(v)) for (k, v) in self.hashval_to_idx.items())
+            save_d["hashval_to_idx"] = dict(
+                (k, list(v)) for (k, v) in self.hashval_to_idx.items()
+            )
 
-            save_d['ident_to_name'] = self.ident_to_name
-            save_d['ident_to_idx'] = self.ident_to_idx
-            save_d['idx_to_lid'] = self.idx_to_lid
-            save_d['lid_to_lineage'] = self.lid_to_lineage
-            
+            save_d["ident_to_name"] = self.ident_to_name
+            save_d["ident_to_idx"] = self.ident_to_idx
+            save_d["idx_to_lid"] = self.idx_to_lid
+            save_d["lid_to_lineage"] = self.lid_to_lineage
+
             json.dump(save_d, fp)
 
     def search(self, query, *args, **kwargs):
@@ -313,11 +332,11 @@ class LCA_Database(Index):
             return []
 
         # check arguments
-        if 'threshold' not in kwargs:
+        if "threshold" not in kwargs:
             raise TypeError("'search' requires 'threshold'")
-        threshold = kwargs['threshold']
-        do_containment = kwargs.get('do_containment', False)
-        ignore_abundance = kwargs.get('ignore_abundance', False)
+        threshold = kwargs["threshold"]
+        do_containment = kwargs.get("do_containment", False)
+        ignore_abundance = kwargs.get("ignore_abundance", False)
         mh = query.minhash
         if ignore_abundance:
             mh.track_abundance = False
@@ -337,13 +356,14 @@ class LCA_Database(Index):
             return []
 
         results = []
-        threshold_bp = kwargs.get('threshold_bp', 0.0)
+        threshold_bp = kwargs.get("threshold_bp", 0.0)
         threshold = threshold_bp / (len(query.minhash) * self.scaled)
 
         # grab first match, if any, and return that; since _find_signatures
         # is a generator, this will truncate further searches.
-        for x in self._find_signatures(query.minhash, threshold,
-                                       containment=True, ignore_scaled=True):
+        for x in self._find_signatures(
+            query.minhash, threshold, containment=True, ignore_scaled=True
+        ):
             (score, match, filename) = x
             if score:
                 results.append((score, match, filename))
@@ -366,7 +386,9 @@ class LCA_Database(Index):
         if scaled == self.scaled:
             return
         elif scaled < self.scaled:
-            raise ValueError("cannot decrease scaled from {} to {}".format(self.scaled, scaled))
+            raise ValueError(
+                "cannot decrease scaled from {} to {}".format(self.scaled, scaled)
+            )
 
         self._invalidate_cache()
 
@@ -403,16 +425,22 @@ class LCA_Database(Index):
         is_protein = False
         is_hp = False
         is_dayhoff = False
-        if self.moltype == 'protein':
+        if self.moltype == "protein":
             is_protein = True
-        elif self.moltype == 'hp':
+        elif self.moltype == "hp":
             is_hp = True
-        elif self.moltype == 'dayhoff':
+        elif self.moltype == "dayhoff":
             is_dayhoff = True
-        minhash = MinHash(n=0, ksize=self.ksize, scaled=self.scaled,
-                          is_protein=is_protein, hp=is_hp, dayhoff=is_dayhoff)
+        minhash = MinHash(
+            n=0,
+            ksize=self.ksize,
+            scaled=self.scaled,
+            is_protein=is_protein,
+            hp=is_hp,
+            dayhoff=is_dayhoff,
+        )
 
-        debug('creating signatures for LCA DB...')
+        debug("creating signatures for LCA DB...")
         mhd = defaultdict(minhash.copy_and_clear)
         temp_vals = defaultdict(list)
 
@@ -444,11 +472,12 @@ class LCA_Database(Index):
             name = self.ident_to_name[ident]
             sigd[idx] = SourmashSignature(mh, name=name)
 
-        debug('=> {} signatures!', len(sigd))
+        debug("=> {} signatures!", len(sigd))
         return sigd
 
-    def _find_signatures(self, minhash, threshold, containment=False,
-                       ignore_scaled=False):
+    def _find_signatures(
+        self, minhash, threshold, containment=False, ignore_scaled=False
+    ):
         """
         Do a Jaccard similarity or containment search, yield results.
 
@@ -461,7 +490,11 @@ class LCA_Database(Index):
             minhash = minhash.downsample(scaled=self.scaled)
         elif self.scaled < minhash.scaled and not ignore_scaled:
             # note that containment can be calculated w/o matching scaled.
-            raise ValueError("lca db scaled is {} vs query {}; must downsample".format(self.scaled, minhash.scaled))
+            raise ValueError(
+                "lca db scaled is {} vs query {}; must downsample".format(
+                    self.scaled, minhash.scaled
+                )
+            )
 
         query_mins = set(minhash.hashes)
 
@@ -472,7 +505,7 @@ class LCA_Database(Index):
             for idx in idx_list:
                 c[idx] += 1
 
-        debug('number of matching signatures for hashes: {}', len(c))
+        debug("number of matching signatures for hashes: {}", len(c))
 
         # for each match, in order of largest overlap,
         for idx, count in c.most_common():
@@ -529,14 +562,14 @@ def load_databases(filenames, scaled=None, verbose=True):
     # load all the databases
     for db_name in filenames:
         if verbose:
-            notify(u'\r\033[K', end=u'')
-            notify('... loading database {}'.format(db_name), end='\r')
+            notify(u"\r\033[K", end=u"")
+            notify("... loading database {}".format(db_name), end="\r")
 
         lca_db = LCA_Database.load(db_name)
 
         ksize_vals.add(lca_db.ksize)
         if len(ksize_vals) > 1:
-            raise Exception('multiple ksizes, quitting')
+            raise Exception("multiple ksizes, quitting")
 
         if scaled and scaled > lca_db.scaled:
             lca_db.downsample_scaled(scaled)
@@ -544,7 +577,7 @@ def load_databases(filenames, scaled=None, verbose=True):
 
         moltype_vals.add(lca_db.moltype)
         if len(moltype_vals) > 1:
-            raise Exception('multiple moltypes, quitting')
+            raise Exception("multiple moltypes, quitting")
 
         dblist.append(lca_db)
 
@@ -553,8 +586,13 @@ def load_databases(filenames, scaled=None, verbose=True):
     moltype = moltype_vals.pop()
 
     if verbose:
-        notify(u'\r\033[K', end=u'')
-        notify('loaded {} LCA databases. ksize={}, scaled={} moltype={}',
-               len(dblist), ksize, scaled, moltype)
+        notify(u"\r\033[K", end=u"")
+        notify(
+            "loaded {} LCA databases. ksize={}, scaled={} moltype={}",
+            len(dblist),
+            ksize,
+            scaled,
+            moltype,
+        )
 
     return dblist, ksize, scaled

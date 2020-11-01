@@ -12,19 +12,28 @@ import pkg_resources
 from pkg_resources import Requirement, resource_filename, ResolutionError
 import traceback
 from io import open  # pylint: disable=redefined-builtin
+
 try:
     from StringIO import StringIO
 except ImportError:
     from io import StringIO
 
 
-SIG_FILES = [os.path.join('demo', f) for f in (
-  "SRR2060939_1.sig", "SRR2060939_2.sig", "SRR2241509_1.sig",
-  "SRR2255622_1.sig", "SRR453566_1.sig", "SRR453569_1.sig", "SRR453570_1.sig")
+SIG_FILES = [
+    os.path.join("demo", f)
+    for f in (
+        "SRR2060939_1.sig",
+        "SRR2060939_2.sig",
+        "SRR2241509_1.sig",
+        "SRR2255622_1.sig",
+        "SRR453566_1.sig",
+        "SRR453569_1.sig",
+        "SRR453570_1.sig",
+    )
 ]
 
 
-def scriptpath(scriptname='sourmash'):
+def scriptpath(scriptname="sourmash"):
     """Return the path to the scripts, in both dev and install situations."""
     # note - it doesn't matter what the scriptname is here, as long as
     # it's some script present in this version of sourmash.
@@ -37,7 +46,7 @@ def scriptpath(scriptname='sourmash'):
     if os.path.exists(os.path.join(path, scriptname)):
         return path
 
-    for path in os.environ['PATH'].split(':'):
+    for path in os.environ["PATH"].split(":"):
         if os.path.exists(os.path.join(path, scriptname)):
             return path
 
@@ -45,10 +54,10 @@ def scriptpath(scriptname='sourmash'):
 def _runscript(scriptname):
     """Find & run a script with exec (i.e. not via os.system or subprocess)."""
     namespace = {"__name__": "__main__"}
-    namespace['sys'] = globals()['sys']
+    namespace["sys"] = globals()["sys"]
 
     try:
-        pkg_resources.load_entry_point("sourmash", 'console_scripts', scriptname)()
+        pkg_resources.load_entry_point("sourmash", "console_scripts", scriptname)()
         return 0
     except pkg_resources.ResolutionError:
         pass
@@ -59,15 +68,15 @@ def _runscript(scriptname):
     if os.path.isfile(scriptfile):
         if os.path.isfile(scriptfile):
             exec(  # pylint: disable=exec-used
-                compile(open(scriptfile).read(), scriptfile, 'exec'),
-                namespace)
+                compile(open(scriptfile).read(), scriptfile, "exec"), namespace
+            )
             return 0
 
     return -1
 
 
-ScriptResults = collections.namedtuple('ScriptResults',
-                                       ['status', 'out', 'err'])
+ScriptResults = collections.namedtuple("ScriptResults", ["status", "out", "err"])
+
 
 def runscript(scriptname, args, **kwargs):
     """Run a Python script using exec().
@@ -83,8 +92,8 @@ def runscript(scriptname, args, **kwargs):
     sysargs.extend(args)
 
     cwd = os.getcwd()
-    in_directory = kwargs.get('in_directory', cwd)
-    fail_ok = kwargs.get('fail_ok', False)
+    in_directory = kwargs.get("in_directory", cwd)
+    fail_ok = kwargs.get("fail_ok", False)
 
     try:
         status = -1
@@ -92,8 +101,8 @@ def runscript(scriptname, args, **kwargs):
         sys.argv = sysargs
 
         oldin = None
-        if 'stdin_data' in kwargs:
-            oldin, sys.stdin = sys.stdin, StringIO(kwargs['stdin_data'])
+        if "stdin_data" in kwargs:
+            oldin, sys.stdin = sys.stdin, StringIO(kwargs["stdin_data"])
 
         oldout, olderr = sys.stdout, sys.stderr
         sys.stdout = StringIO()
@@ -103,8 +112,8 @@ def runscript(scriptname, args, **kwargs):
         os.chdir(in_directory)
 
         try:
-            print('running:', scriptname, 'in:', in_directory, file=oldout)
-            print('arguments', sysargs, file=oldout)
+            print("running:", scriptname, "in:", in_directory, file=oldout)
+            print("arguments", sysargs, file=oldout)
 
             status = _runscript(scriptname)
         except SystemExit as err:
@@ -134,19 +143,18 @@ def get_test_data(filename):
     filepath = None
     try:
         filepath = resource_filename(
-            Requirement.parse("sourmash"), "sourmash/sourmash/test-data/"\
-                + filename)
+            Requirement.parse("sourmash"), "sourmash/sourmash/test-data/" + filename
+        )
     except ResolutionError:
         pass
     if not filepath or not os.path.isfile(filepath):
-        filepath = os.path.join(os.path.dirname(__file__), 'test-data',
-                                filename)
+        filepath = os.path.join(os.path.dirname(__file__), "test-data", filename)
     return filepath
 
 
 class TempDirectory(object):
     def __init__(self):
-        self.tempdir = tempfile.mkdtemp(prefix='sourmashtest_')
+        self.tempdir = tempfile.mkdtemp(prefix="sourmashtest_")
 
     def __enter__(self):
         return self.tempdir
@@ -171,6 +179,7 @@ class RunnerContext(object):
 
     You can use the 'output' method to build filenames in my temp directory.
     """
+
     def __init__(self, location):
         self.location = location
         self.last_command = None
@@ -178,14 +187,14 @@ class RunnerContext(object):
 
     def run_sourmash(self, *args, **kwargs):
         "Run the sourmash script with the given arguments."
-        kwargs['fail_ok'] = True
-        if 'in_directory' not in kwargs:
-            kwargs['in_directory'] = self.location
+        kwargs["fail_ok"] = True
+        if "in_directory" not in kwargs:
+            kwargs["in_directory"] = self.location
 
-        cmdlist = ['sourmash']
+        cmdlist = ["sourmash"]
         cmdlist.extend(args)
         self.last_command = " ".join(cmdlist)
-        self.last_result = runscript('sourmash', args, **kwargs)
+        self.last_result = runscript("sourmash", args, **kwargs)
 
         if self.last_result.status:
             raise ValueError(self)
@@ -194,8 +203,8 @@ class RunnerContext(object):
 
     def run(self, scriptname, *args, **kwargs):
         "Run a script with the given arguments."
-        if 'in_directory' not in kwargs:
-            kwargs['in_directory'] = self.location
+        if "in_directory" not in kwargs:
+            kwargs["in_directory"] = self.location
         self.last_command = " ".join(args)
         self.last_result = runscript(scriptname, args, **kwargs)
         return self.last_result
@@ -213,11 +222,11 @@ class RunnerContext(object):
                 if self.last_result.out:
                     s += "- stdout:\n---\n{}---\n".format(self.last_result.out)
                 else:
-                    s += '(no stdout)\n\n'
+                    s += "(no stdout)\n\n"
                 if self.last_result.err:
                     s += "- stderr:\n---\n{}---\n".format(self.last_result.err)
                 else:
-                    s += '(no stderr)\n'
+                    s += "(no stderr)\n"
 
         return s
 
