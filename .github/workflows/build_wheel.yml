@@ -56,6 +56,9 @@ jobs:
       fail-fast: false
 
     steps:
+      - name: Avoid problems with "\r"
+        run: git config --global core.autocrlf input
+
       - uses: actions/checkout@v2
         with:
           fetch-depth: 0
