@@ -281,7 +281,7 @@ def load_dbs_and_sigs(filenames, query, is_similarity_query, *, cache_size=None)
             assert dbtype == DatabaseType.SIGLIST
 
             siglist = _select_sigs(db, moltype=query_moltype, ksize=query_ksize)
-            siglist = filter_compatible_signatures(query, siglist, 1)
+            siglist = filter_compatible_signatures(query, siglist, True)
             linear = LinearIndex(siglist, filename=filename)
             databases.append(linear)
 
@@ -311,8 +311,15 @@ def load_dbs_and_sigs(filenames, query, is_similarity_query, *, cache_size=None)
         # signature file
         elif dbtype == DatabaseType.SIGLIST:
             siglist = _select_sigs(db, moltype=query_moltype, ksize=query_ksize)
-            siglist = filter_compatible_signatures(query, siglist, False)
-            siglist = list(siglist)
+            try:
+                # CTB: it's not clear to me that filter_compatible_signatures
+                # should fail here, on incompatible signatures; but that's
+                # what we have it doing currently. Revisit.
+                siglist = filter_compatible_signatures(query, siglist, False)
+                siglist = list(siglist)
+            except ValueError:
+                siglist = []
+
             if not siglist:
                 notify("no compatible signatures found in '{}'", filename)
                 sys.exit(-1)
@@ -561,15 +568,16 @@ class FileOutput(object):
 
     will properly handle no argument or '-' as sys.stdout.
     """
-    def __init__(self, filename, mode='wt'):
+    def __init__(self, filename, mode='wt', newline=None):
         self.filename = filename
         self.mode = mode
         self.fp = None
+        self.newline = newline
 
     def open(self):
         if self.filename == '-' or self.filename is None:
             return sys.stdout
-        self.fp = open(self.filename, self.mode)
+        self.fp = open(self.filename, self.mode, newline=self.newline)
         return self.fp
 
     def __enter__(self):
@@ -581,6 +589,37 @@ class FileOutput(object):
             self.fp.close()
 
         return False
+
+class FileOutputCSV(FileOutput):
+    """A context manager for CSV file outputs.
+
+    Usage:
+
+       with FileOutputCSV(filename) as fp:
+          ...
+
+    does what you'd expect, but it handles the situation where 'filename'
+    is '-' or None. This makes it nicely compatible with argparse usage,
+    e.g.
+
+    p = argparse.ArgumentParser()
+    p.add_argument('--output')
+    args = p.parse_args()
+    ...
+    with FileOutputCSV(args.output) as w:
+       ...
+
+    will properly handle no argument or '-' as sys.stdout.
+    """
+    def __init__(self, filename):
+        self.filename = filename
+        self.fp = None
+
+    def open(self):
+        if self.filename == '-' or self.filename is None:
+            return sys.stdout
+        self.fp = open(self.filename, 'w', newline='')
+        return self.fp
 
 
 class SignatureLoadingProgress(object):
