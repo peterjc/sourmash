@@ -1,7 +1,7 @@
+use std::collections::HashMap;
 use std::fs::{DirBuilder, File};
 use std::io::{BufReader, BufWriter, Read, Write};
 use std::path::PathBuf;
-use std::collections::HashMap;
 use std::sync::Mutex;
 
 use serde::{Deserialize, Serialize};

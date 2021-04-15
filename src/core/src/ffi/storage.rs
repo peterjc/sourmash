@@ -1,5 +1,5 @@
 use crate::ffi::utils::ForeignObject;
-use crate::storage::MemStorage;
+use crate::index::storage::MemStorage;
 
 pub struct SourmashMemStorage;
 
